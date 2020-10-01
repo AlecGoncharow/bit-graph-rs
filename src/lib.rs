@@ -131,6 +131,7 @@ impl Graph {
     }
 }
 
+#[inline(always)]
 fn get_bit(n: usize, k: usize) -> bool {
     if (n >> k) & 1 == 0 {
         false
@@ -139,14 +140,17 @@ fn get_bit(n: usize, k: usize) -> bool {
     }
 }
 
+#[inline(always)]
 pub fn set_bit(n: usize, k: usize) -> usize {
     n | (1 << k)
 }
 
+#[inline(always)]
 pub fn unset_bit(n: usize, k: usize) -> usize {
     n & !(1 << k)
 }
 
+#[inline(always)]
 pub fn toggle_bit(n: usize, k: usize) -> usize {
     n ^ (1 << k)
 }
