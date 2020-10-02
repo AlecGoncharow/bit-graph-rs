@@ -111,6 +111,11 @@ impl Graph<u64> for AdjGraph {
     fn remove_node(&mut self, _node_index: usize) -> u64 {
         todo!()
     }
+
+    #[inline]
+    fn node_count(&self) -> usize {
+        self.count
+    }
 }
 
 #[cfg(test)]

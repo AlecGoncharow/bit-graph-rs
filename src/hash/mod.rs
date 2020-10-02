@@ -270,6 +270,10 @@ impl Graph<u64> for HashGraph {
 
         val
     }
+
+    fn node_count(&self) -> usize {
+        self.count
+    }
 }
 
 #[cfg(test)]

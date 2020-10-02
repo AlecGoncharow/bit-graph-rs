@@ -1,6 +1,7 @@
 pub mod baseline;
 pub mod bit;
 pub mod hash;
+pub mod search;
 
 pub use baseline::AdjGraph;
 pub use bit::BitGraph;
@@ -61,4 +62,6 @@ pub trait Graph<T> {
 
     /// removes node from graph's node storage, removes dependant edges from graph.
     fn remove_node(&mut self, node_index: usize) -> T;
+
+    fn node_count(&self) -> usize;
 }

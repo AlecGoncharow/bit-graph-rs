@@ -78,6 +78,11 @@ impl BitGraph {
     }
 }
 
+/// makes a mask for a single bit of a given offset
+pub fn single_bit_mask(offset: usize) -> usize {
+    1 << offset
+}
+
 #[inline(always)]
 fn get_bit(n: usize, k: usize) -> bool {
     if (n >> k) & 1 == 0 {
@@ -220,6 +225,11 @@ impl Graph<u64> for BitGraph {
 
     fn get_edge(&self, _from: usize, _to: usize) -> Option<&EdgeMeta> {
         todo!()
+    }
+
+    #[inline]
+    fn node_count(&self) -> usize {
+        self.count
     }
 }
 
