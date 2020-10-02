@@ -1,4 +1,4 @@
-use crate::EdgeMeta;
+use crate::{EdgeMeta, Graph};
 use std::num::Wrapping;
 
 const DEFAULT_CAPACITY: usize = 256;
@@ -92,7 +92,7 @@ impl PairHashTable {
         }
     }
 
-    fn insert(&mut self, key: IndexPair) -> bool {
+    fn insert(&mut self, key: IndexPair, weight: usize) -> bool {
         if self.count + 1 > (self.table.capacity() as f32 * MAX_LOAD) as usize {
             let new_capacity = self.table.capacity() * GROW_FACTOR;
             self.resize(new_capacity);
@@ -116,6 +116,7 @@ impl PairHashTable {
             edge_meta: EdgeMeta {
                 source: key.0,
                 destination: key.1,
+                weight,
             },
         });
 
@@ -163,7 +164,7 @@ impl PairHashTable {
         for i in 0..self.table.capacity() {
             if let Some(entry) = &self.table[i] {
                 if !entry.is_deleted {
-                    new_table.insert(entry.edge_meta.key_pair());
+                    new_table.insert(entry.edge_meta.key_pair(), entry.edge_meta.weight);
                 }
             }
         }
@@ -200,20 +201,26 @@ impl HashGraph {
             edges: PairHashTable::with_capacity(size),
         }
     }
+}
 
-    pub fn add_edge(&mut self, from: usize, to: usize) -> bool {
-        self.edges.insert((from, to))
+impl Graph<u64> for HashGraph {
+    fn add_edge(&mut self, from: usize, to: usize) -> bool {
+        self.edges.insert((from, to), 1)
     }
 
-    pub fn remove_edge(&mut self, from: usize, to: usize) -> bool {
+    fn remove_edge(&mut self, from: usize, to: usize) -> bool {
         self.edges.delete((from, to))
     }
 
-    pub fn get_edge(&self, from: usize, to: usize) -> bool {
+    fn has_edge(&self, from: usize, to: usize) -> bool {
         self.edges.get((from, to)).is_some()
     }
 
-    pub fn outgoing_edges_of(&self, node_index: usize) -> Vec<usize> {
+    fn get_edge(&self, from: usize, to: usize) -> Option<&EdgeMeta> {
+        self.edges.get((from, to))
+    }
+
+    fn outgoing_edges_of(&self, node_index: usize) -> Vec<usize> {
         let mut out = Vec::new();
 
         for i in 0..self.count {
@@ -225,7 +232,7 @@ impl HashGraph {
         out
     }
 
-    pub fn incoming_edges_of(&self, node_index: usize) -> Vec<usize> {
+    fn incoming_edges_of(&self, node_index: usize) -> Vec<usize> {
         let mut out = Vec::new();
 
         for i in 0..self.count {
@@ -237,9 +244,31 @@ impl HashGraph {
         out
     }
 
-    pub fn push_node(&mut self, value: u64) {
+    fn push_node(&mut self, value: u64) {
         self.count += 1;
         self.nodes.push(value);
+    }
+
+    fn set_node(&mut self, _node_index: usize, _value: u64) {
+        todo!();
+    }
+
+    fn get_node(&self, node_index: usize) -> &u64 {
+        // @FIXME
+        &self.nodes[node_index]
+    }
+
+    fn remove_node(&mut self, node_index: usize) -> u64 {
+        for i in 0..self.count {
+            self.remove_edge(i, node_index);
+            self.remove_edge(node_index, i);
+        }
+
+        let val = self.nodes[node_index];
+
+        self.nodes[node_index] = 0;
+
+        val
     }
 }
 
@@ -251,15 +280,15 @@ mod test_hashtable {
     fn it_works() {
         let mut table = PairHashTable::new();
 
-        table.insert((1, 0));
-        table.insert((4, 2));
-        table.insert((6, 2));
-        table.insert((9, 10));
-        table.insert((4, 23));
+        table.insert((1, 0), 1);
+        table.insert((4, 2), 1);
+        table.insert((6, 2), 1);
+        table.insert((9, 10), 1);
+        table.insert((4, 23), 1);
 
         assert_eq!(table.count, 5);
 
-        assert!(table.insert((1, 0)));
+        assert!(table.insert((1, 0), 1));
         assert!(table.get((9, 10)).is_some());
         assert!(table.get((9, 3)).is_none());
     }
@@ -281,8 +310,8 @@ mod test_hashgraph {
 
         graph.add_edge(2, 0);
 
-        assert!(graph.get_edge(2, 0));
-        assert!(!graph.get_edge(4, 3));
+        assert!(graph.has_edge(2, 0));
+        assert!(!graph.has_edge(4, 3));
     }
 
     #[test]

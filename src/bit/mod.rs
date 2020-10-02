@@ -2,7 +2,9 @@ const WORD_BYTES: usize = std::mem::size_of::<usize>();
 const WORD_BITS: usize = WORD_BYTES * 8;
 const DEFAULT_CAPACITY: usize = 16;
 
-pub struct Graph {
+use crate::{EdgeMeta, Graph};
+
+pub struct BitGraph {
     count: usize,
 
     nodes: Vec<u64>,
@@ -14,27 +16,19 @@ pub struct Graph {
     edges_transpose: Vec<usize>,
 }
 
-impl Graph {
-    pub fn new() -> Graph {
+impl BitGraph {
+    pub fn new() -> BitGraph {
         Self::with_capacity(DEFAULT_CAPACITY)
     }
 
-    pub fn with_capacity(size: usize) -> Graph {
-        Graph {
+    pub fn with_capacity(size: usize) -> BitGraph {
+        BitGraph {
             count: 0,
 
             nodes: Vec::with_capacity(size),
             edges: vec![0; (size * size) / WORD_BITS + 1],
             edges_transpose: vec![0; (size * size) / WORD_BITS + 1],
         }
-    }
-
-    pub fn add_edge(&mut self, from: usize, to: usize) -> bool {
-        self.set_edge(from, to, set_bit)
-    }
-
-    pub fn remove_edge(&mut self, from: usize, to: usize) -> bool {
-        self.set_edge(from, to, unset_bit)
     }
 
     fn set_edge<F>(&mut self, from: usize, to: usize, fun: F) -> bool
@@ -82,8 +76,42 @@ impl Graph {
 
         self.edges_transpose[row + column] = new_word;
     }
+}
 
-    pub fn get_edge(&self, from: usize, to: usize) -> bool {
+#[inline(always)]
+fn get_bit(n: usize, k: usize) -> bool {
+    if (n >> k) & 1 == 0 {
+        false
+    } else {
+        true
+    }
+}
+
+#[inline(always)]
+pub fn set_bit(n: usize, k: usize) -> usize {
+    n | (1 << k)
+}
+
+#[inline(always)]
+pub fn unset_bit(n: usize, k: usize) -> usize {
+    n & !(1 << k)
+}
+
+#[inline(always)]
+pub fn toggle_bit(n: usize, k: usize) -> usize {
+    n ^ (1 << k)
+}
+
+impl Graph<u64> for BitGraph {
+    fn add_edge(&mut self, from: usize, to: usize) -> bool {
+        self.set_edge(from, to, set_bit)
+    }
+
+    fn remove_edge(&mut self, from: usize, to: usize) -> bool {
+        self.set_edge(from, to, unset_bit)
+    }
+
+    fn has_edge(&self, from: usize, to: usize) -> bool {
         let row = (self.nodes.capacity() * from) / WORD_BITS;
         let column = to / WORD_BITS;
         let offset = to % WORD_BITS + ((self.nodes.capacity() * from) % WORD_BITS);
@@ -93,7 +121,7 @@ impl Graph {
         get_bit(word, offset)
     }
 
-    pub fn outgoing_edges_of(&self, node_index: usize) -> Vec<usize> {
+    fn outgoing_edges_of(&self, node_index: usize) -> Vec<usize> {
         let mut index = (self.nodes.capacity() * node_index) / WORD_BITS;
         let mut offset = (self.nodes.capacity() * node_index) % WORD_BITS;
 
@@ -133,7 +161,7 @@ impl Graph {
         out
     }
 
-    pub fn incoming_edges_of(&self, node_index: usize) -> Vec<usize> {
+    fn incoming_edges_of(&self, node_index: usize) -> Vec<usize> {
         let mut index = (self.nodes.capacity() * node_index) / WORD_BITS;
         let mut offset = (self.nodes.capacity() * node_index) % WORD_BITS;
 
@@ -173,43 +201,35 @@ impl Graph {
         out
     }
 
-    pub fn push_node(&mut self, value: u64) {
+    fn push_node(&mut self, value: u64) {
         self.count += 1;
         self.nodes.push(value);
     }
-}
 
-#[inline(always)]
-fn get_bit(n: usize, k: usize) -> bool {
-    if (n >> k) & 1 == 0 {
-        false
-    } else {
-        true
+    fn set_node(&mut self, _node_index: usize, _value: u64) {
+        todo!()
     }
-}
 
-#[inline(always)]
-pub fn set_bit(n: usize, k: usize) -> usize {
-    n | (1 << k)
-}
+    fn get_node(&self, _node_index: usize) -> &u64 {
+        todo!()
+    }
 
-#[inline(always)]
-pub fn unset_bit(n: usize, k: usize) -> usize {
-    n & !(1 << k)
-}
+    fn remove_node(&mut self, _node_index: usize) -> u64 {
+        todo!()
+    }
 
-#[inline(always)]
-pub fn toggle_bit(n: usize, k: usize) -> usize {
-    n ^ (1 << k)
+    fn get_edge(&self, _from: usize, _to: usize) -> Option<&EdgeMeta> {
+        todo!()
+    }
 }
 
 #[cfg(test)]
 mod tests {
-    use crate::Graph;
+    use super::*;
 
     #[test]
     fn it_works() {
-        let mut graph = Graph::new();
+        let mut graph = BitGraph::new();
 
         for i in 1..16 {
             graph.push_node(i);
@@ -219,13 +239,13 @@ mod tests {
 
         graph.add_edge(2, 0);
 
-        assert!(graph.get_edge(2, 0));
-        assert!(!graph.get_edge(4, 3));
+        assert!(graph.has_edge(2, 0));
+        assert!(!graph.has_edge(4, 3));
     }
 
     #[test]
     fn outgoing_edges_test() {
-        let mut graph = Graph::new();
+        let mut graph = BitGraph::new();
 
         for i in 1..16 {
             graph.push_node(i);
@@ -259,7 +279,7 @@ mod tests {
 
     #[test]
     fn strange_outgoing_edges_test() {
-        let mut graph = Graph::with_capacity(521);
+        let mut graph = BitGraph::with_capacity(521);
 
         for i in 1..510 {
             graph.push_node(i);
@@ -293,7 +313,7 @@ mod tests {
 
     #[test]
     fn large_outgoing_edges_test() {
-        let mut graph = Graph::with_capacity(100_000);
+        let mut graph = BitGraph::with_capacity(100_000);
 
         for i in 0..100_000 {
             graph.push_node(i);
@@ -327,7 +347,7 @@ mod tests {
 
     #[test]
     fn large_incoming_edges_test() {
-        let mut graph = Graph::with_capacity(100_000);
+        let mut graph = BitGraph::with_capacity(100_000);
 
         for i in 0..100_000 {
             graph.push_node(i);
@@ -352,7 +372,7 @@ mod tests {
 
     #[test]
     fn incoming_edges_test() {
-        let mut graph = Graph::new();
+        let mut graph = BitGraph::new();
 
         for i in 1..16 {
             graph.push_node(i);

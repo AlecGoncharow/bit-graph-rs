@@ -1,7 +1,7 @@
-use bit_graph::Graph;
+use bit_graph::{BitGraph, Graph};
 
 pub fn main() {
-    let mut graph = Graph::with_capacity(16);
+    let mut graph = BitGraph::with_capacity(16);
 
     for i in 0..15 {
         graph.push_node(i);

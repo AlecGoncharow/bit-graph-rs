@@ -57,7 +57,7 @@ impl Graph<u64> for AdjGraph {
         self.set_edge(from, to, false)
     }
 
-    fn get_edge(&self, _from: usize, _to: usize) -> Option<&EdgeMeta> {
+    fn get_edge(&self, from: usize, to: usize) -> Option<&EdgeMeta> {
         unimplemented!()
     }
 
