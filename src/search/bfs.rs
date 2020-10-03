@@ -3,33 +3,34 @@ const WORD_BITS: usize = WORD_BYTES * 8;
 
 use crate::bit::single_bit_mask;
 use crate::Graph;
+use std::collections::VecDeque;
 
-pub struct DFS<'a, V> {
+pub struct BFS<'a, V> {
     root_idx: usize,
 
-    stack: Vec<(usize, usize)>,
+    queue: VecDeque<(usize, usize)>,
 
     discovered: Vec<usize>,
 
     graph: &'a dyn Graph<V>,
 }
 
-impl<'a, V> DFS<'a, V> {
+impl<'a, V> BFS<'a, V> {
     pub fn new(graph: &'a dyn Graph<V>, root_idx: usize) -> Self {
         Self {
             graph,
             root_idx,
             discovered: vec![0; graph.node_count() / WORD_BITS + 1],
-            stack: vec![(root_idx, root_idx)],
+            queue: VecDeque::from(vec![(root_idx, root_idx)]),
         }
     }
 
     pub fn next(&mut self) -> Option<(usize, usize)> {
-        while let Some((idx, from)) = self.stack.pop() {
+        while let Some((idx, from)) = self.queue.pop_front() {
             if self.visit_node(idx) {
                 for out in self.graph.outgoing_edges_of(idx) {
                     if !self.is_discovered(out) {
-                        self.stack.push((out, idx));
+                        self.queue.push_back((out, idx));
                     }
                 }
 
@@ -43,7 +44,7 @@ impl<'a, V> DFS<'a, V> {
         let mut from_map = vec![std::usize::MAX; self.graph.node_count()];
         let mut out = Vec::new();
 
-        while let Some((idx, from)) = self.stack.pop() {
+        while let Some((idx, from)) = self.queue.pop_front() {
             if idx == to_idx {
                 let mut from_tmp = from;
                 out.push(idx);
@@ -52,7 +53,6 @@ impl<'a, V> DFS<'a, V> {
                     if from_tmp == self.root_idx {
                         break;
                     }
-
                     let from_idx = from_map[from_tmp];
                     out.push(from_idx);
 
@@ -67,7 +67,7 @@ impl<'a, V> DFS<'a, V> {
 
                 for out in self.graph.outgoing_edges_of(idx) {
                     if !self.is_discovered(out) {
-                        self.stack.push((out, idx));
+                        self.queue.push_back((out, idx));
                     }
                 }
             }
@@ -124,11 +124,11 @@ mod test_dfs {
         graph.add_edge(3, 5);
         graph.add_edge(5, 0);
 
-        let mut dfs = DFS::new(&graph, 0);
+        let mut dfs = BFS::new(&graph, 0);
         let found = loop {
             if let Some((idx, from)) = dfs.next() {
                 if idx == 5 {
-                    assert_eq!(from, 8);
+                    assert_eq!(from, 3);
                     break true;
                 }
             } else {
@@ -136,13 +136,13 @@ mod test_dfs {
             }
         };
 
-        dfs = DFS::new(&graph, 0);
+        dfs = BFS::new(&graph, 0);
         let path = dfs.path_to(5).unwrap();
 
         assert!(found);
-        assert!(path.len() == 5);
+        assert!(path.len() == 4);
 
-        let mut dfs = DFS::new(&graph, 0);
+        let mut dfs = BFS::new(&graph, 0);
         let not_found = loop {
             if let Some((idx, _from)) = dfs.next() {
                 if idx == 10 {
