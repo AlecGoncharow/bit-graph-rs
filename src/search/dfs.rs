@@ -4,18 +4,18 @@ const WORD_BITS: usize = WORD_BYTES * 8;
 use crate::bit::single_bit_mask;
 use crate::Graph;
 
-pub struct DFS<'a, V> {
+pub struct DFS<'a, V, W> {
     root_idx: usize,
 
     stack: Vec<(usize, usize)>,
 
     discovered: Vec<usize>,
 
-    graph: &'a dyn Graph<V>,
+    graph: &'a dyn Graph<V, W>,
 }
 
-impl<'a, V> DFS<'a, V> {
-    pub fn new(graph: &'a dyn Graph<V>, root_idx: usize) -> Self {
+impl<'a, V, W> DFS<'a, V, W> {
+    pub fn new(graph: &'a dyn Graph<V, W>, root_idx: usize) -> Self {
         Self {
             graph,
             root_idx,

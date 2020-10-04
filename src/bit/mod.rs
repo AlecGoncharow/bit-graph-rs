@@ -31,7 +31,7 @@ impl BitGraph {
         }
     }
 
-    fn set_edge<F>(&mut self, from: usize, to: usize, fun: F) -> bool
+    fn set_edge_of_both<F>(&mut self, from: usize, to: usize, fun: F) -> bool
     where
         F: Fn(usize, usize) -> usize,
     {
@@ -107,13 +107,13 @@ pub fn toggle_bit(n: usize, k: usize) -> usize {
     n ^ (1 << k)
 }
 
-impl Graph<u64> for BitGraph {
+impl Graph<u64, bool> for BitGraph {
     fn add_edge(&mut self, from: usize, to: usize) -> bool {
-        self.set_edge(from, to, set_bit)
+        self.set_edge_of_both(from, to, set_bit)
     }
 
     fn remove_edge(&mut self, from: usize, to: usize) -> bool {
-        self.set_edge(from, to, unset_bit)
+        self.set_edge_of_both(from, to, unset_bit)
     }
 
     fn has_edge(&self, from: usize, to: usize) -> bool {
@@ -206,9 +206,10 @@ impl Graph<u64> for BitGraph {
         out
     }
 
-    fn push_node(&mut self, value: u64) {
+    fn push_node(&mut self, value: u64) -> usize {
         self.count += 1;
         self.nodes.push(value);
+        self.nodes.len() - 1
     }
 
     fn set_node(&mut self, _node_index: usize, _value: u64) {
@@ -223,13 +224,35 @@ impl Graph<u64> for BitGraph {
         todo!()
     }
 
-    fn get_edge(&self, _from: usize, _to: usize) -> Option<&EdgeMeta> {
-        todo!()
+    fn get_edge(&self, from: usize, to: usize) -> Option<EdgeMeta<bool>> {
+        let row = (self.nodes.capacity() * from) / WORD_BITS;
+        let column = to / WORD_BITS;
+        let offset = to % WORD_BITS + ((self.nodes.capacity() * from) % WORD_BITS);
+
+        let word = self.edges[row + column];
+
+        if get_bit(word, offset) {
+            Some(EdgeMeta {
+                source: from,
+                destination: to,
+                weight: true,
+            })
+        } else {
+            None
+        }
     }
 
     #[inline]
     fn node_count(&self) -> usize {
         self.count
+    }
+
+    fn set_edge(&mut self, from_to: (usize, usize), weight: bool) -> bool {
+        if weight {
+            self.add_edge(from_to.0, from_to.1)
+        } else {
+            self.remove_edge(from_to.0, from_to.1)
+        }
     }
 }
 

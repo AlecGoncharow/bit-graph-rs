@@ -6,8 +6,8 @@ pub struct AdjGraph {
     count: usize,
 
     nodes: Vec<u64>,
-    edges: Vec<bool>,
-    edges_transpose: Vec<bool>,
+    edges: Vec<u8>,
+    edges_transpose: Vec<u8>,
 }
 
 impl AdjGraph {
@@ -20,12 +20,12 @@ impl AdjGraph {
             count: 0,
 
             nodes: Vec::with_capacity(size),
-            edges: vec![false; size * size],
-            edges_transpose: vec![false; size * size],
+            edges: vec![0; size * size],
+            edges_transpose: vec![0; size * size],
         }
     }
 
-    fn set_edge(&mut self, from: usize, to: usize, val: bool) -> bool {
+    fn set_edge_of_both(&mut self, from: usize, to: usize, val: u8) -> u8 {
         // get proper word
         let row = self.nodes.capacity() * from;
         let column = to;
@@ -39,7 +39,7 @@ impl AdjGraph {
         prev
     }
 
-    fn set_edge_of_tranpose(&mut self, from: usize, to: usize, val: bool) {
+    fn set_edge_of_tranpose(&mut self, from: usize, to: usize, val: u8) {
         // get proper word
         let row = self.nodes.capacity() * from;
         let column = to;
@@ -48,16 +48,16 @@ impl AdjGraph {
     }
 }
 
-impl Graph<u64> for AdjGraph {
+impl Graph<u64, u8> for AdjGraph {
     fn add_edge(&mut self, from: usize, to: usize) -> bool {
-        self.set_edge(from, to, true)
+        self.set_edge_of_both(from, to, 1) > 0
     }
 
     fn remove_edge(&mut self, from: usize, to: usize) -> bool {
-        self.set_edge(from, to, false)
+        self.set_edge_of_both(from, to, 0) > 0
     }
 
-    fn get_edge(&self, _from: usize, _to: usize) -> Option<&EdgeMeta> {
+    fn get_edge(&self, _from: usize, _to: usize) -> Option<EdgeMeta<u8>> {
         unimplemented!()
     }
 
@@ -66,7 +66,7 @@ impl Graph<u64> for AdjGraph {
 
         let mut out = Vec::new();
         for i in 0..self.count {
-            if self.edges[index + i] {
+            if self.edges[index + i] > 0 {
                 out.push(i);
             }
         }
@@ -79,7 +79,7 @@ impl Graph<u64> for AdjGraph {
 
         let mut out = Vec::new();
         for i in 0..self.count {
-            if self.edges_transpose[index + i] {
+            if self.edges_transpose[index + i] > 0 {
                 out.push(i);
             }
         }
@@ -87,9 +87,10 @@ impl Graph<u64> for AdjGraph {
         out
     }
 
-    fn push_node(&mut self, value: u64) {
+    fn push_node(&mut self, value: u64) -> usize {
         self.count += 1;
         self.nodes.push(value);
+        self.nodes.len() - 1
     }
 
     fn has_edge(&self, from: usize, to: usize) -> bool {
@@ -97,7 +98,7 @@ impl Graph<u64> for AdjGraph {
         let row = self.nodes.capacity() * from;
         let column = to;
 
-        self.edges[row + column]
+        self.edges[row + column] > 0
     }
 
     fn set_node(&mut self, _node_index: usize, _value: u64) {
@@ -115,6 +116,10 @@ impl Graph<u64> for AdjGraph {
     #[inline]
     fn node_count(&self) -> usize {
         self.count
+    }
+
+    fn set_edge(&mut self, from_to: (usize, usize), weight: u8) -> bool {
+        self.set_edge_of_both(from_to.0, from_to.1, weight) > 0
     }
 }
 

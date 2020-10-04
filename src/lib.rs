@@ -6,14 +6,15 @@ pub mod search;
 pub use baseline::AdjGraph;
 pub use bit::BitGraph;
 
-pub struct EdgeMeta {
+#[derive(Clone, Copy)]
+pub struct EdgeMeta<W> {
     pub source: usize,
     pub destination: usize,
 
-    pub weight: usize,
+    pub weight: W,
 }
 
-impl From<(usize, usize, usize)> for EdgeMeta {
+impl From<(usize, usize, usize)> for EdgeMeta<usize> {
     fn from(t: (usize, usize, usize)) -> Self {
         Self {
             source: t.0,
@@ -23,17 +24,19 @@ impl From<(usize, usize, usize)> for EdgeMeta {
     }
 }
 
-impl EdgeMeta {
+impl EdgeMeta<usize> {
     #[inline]
     pub fn key_pair(&self) -> (usize, usize) {
         (self.source, self.destination)
     }
 }
 
-pub trait Graph<T> {
+pub trait Graph<T, W> {
     /// add a directed edge from `from` and to `to`, represent indicies in some
     /// collection of nodes,left up to the implementation to decide. Weight set to 1
     fn add_edge(&mut self, from: usize, to: usize) -> bool;
+
+    fn set_edge(&mut self, from_to: (usize, usize), weight: W) -> bool;
 
     /// remove a directed edge from `from` and to `to`, represent indicies in some
     /// collection of nodes,left up to the implementation to decide.
@@ -43,7 +46,7 @@ pub trait Graph<T> {
     fn has_edge(&self, from: usize, to: usize) -> bool;
 
     /// returns edge between from `from` to `to` if exists, else None
-    fn get_edge(&self, from: usize, to: usize) -> Option<&EdgeMeta>;
+    fn get_edge(&self, from: usize, to: usize) -> Option<EdgeMeta<W>>;
 
     /// returns `Vec` of indicies coming out from a given node
     fn outgoing_edges_of(&self, node_index: usize) -> Vec<usize>;
@@ -52,7 +55,7 @@ pub trait Graph<T> {
     fn incoming_edges_of(&self, node_index: usize) -> Vec<usize>;
 
     /// appends node to graph's node storage
-    fn push_node(&mut self, value: T);
+    fn push_node(&mut self, value: T) -> usize;
 
     /// sets node at `node_index`
     fn set_node(&mut self, node_index: usize, value: T);

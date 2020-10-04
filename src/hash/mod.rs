@@ -13,7 +13,7 @@ pub struct PairHashTable {
 }
 
 struct Entry {
-    edge_meta: EdgeMeta,
+    edge_meta: EdgeMeta<usize>,
     is_deleted: bool,
 }
 
@@ -150,7 +150,7 @@ impl PairHashTable {
         }
     }
 
-    fn get(&self, key: IndexPair) -> Option<&EdgeMeta> {
+    fn get(&self, key: IndexPair) -> Option<&EdgeMeta<usize>> {
         if let Some(entry) = &self.table[self.index_of(key)] {
             Some(&entry.edge_meta)
         } else {
@@ -203,7 +203,7 @@ impl HashGraph {
     }
 }
 
-impl Graph<u64> for HashGraph {
+impl Graph<u64, usize> for HashGraph {
     fn add_edge(&mut self, from: usize, to: usize) -> bool {
         self.edges.insert((from, to), 1)
     }
@@ -216,8 +216,12 @@ impl Graph<u64> for HashGraph {
         self.edges.get((from, to)).is_some()
     }
 
-    fn get_edge(&self, from: usize, to: usize) -> Option<&EdgeMeta> {
-        self.edges.get((from, to))
+    fn get_edge(&self, from: usize, to: usize) -> Option<EdgeMeta<usize>> {
+        if let Some(edge) = self.edges.get((from, to)) {
+            Some(*edge)
+        } else {
+            None
+        }
     }
 
     fn outgoing_edges_of(&self, node_index: usize) -> Vec<usize> {
@@ -244,9 +248,10 @@ impl Graph<u64> for HashGraph {
         out
     }
 
-    fn push_node(&mut self, value: u64) {
+    fn push_node(&mut self, value: u64) -> usize {
         self.count += 1;
         self.nodes.push(value);
+        self.nodes.len() - 1
     }
 
     fn set_node(&mut self, _node_index: usize, _value: u64) {
@@ -273,6 +278,10 @@ impl Graph<u64> for HashGraph {
 
     fn node_count(&self) -> usize {
         self.count
+    }
+
+    fn set_edge(&mut self, from_to: (usize, usize), weight: usize) -> bool {
+        self.edges.insert(from_to, weight)
     }
 }
 
