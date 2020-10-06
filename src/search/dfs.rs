@@ -4,30 +4,27 @@ const WORD_BITS: usize = WORD_BYTES * 8;
 use crate::bit::single_bit_mask;
 use crate::Graph;
 
-pub struct DFS<'a, V, W> {
+pub struct DFS {
     root_idx: usize,
 
     stack: Vec<(usize, usize)>,
 
     discovered: Vec<usize>,
-
-    graph: &'a dyn Graph<V, W>,
 }
 
-impl<'a, V, W> DFS<'a, V, W> {
-    pub fn new(graph: &'a dyn Graph<V, W>, root_idx: usize) -> Self {
+impl DFS {
+    pub fn new<V, W>(graph: &dyn Graph<V, W>, root_idx: usize) -> Self {
         Self {
-            graph,
             root_idx,
             discovered: vec![0; graph.node_count() / WORD_BITS + 1],
             stack: vec![(root_idx, root_idx)],
         }
     }
 
-    pub fn next(&mut self) -> Option<(usize, usize)> {
+    pub fn next<V, W>(&mut self, graph: &dyn Graph<V, W>) -> Option<(usize, usize)> {
         while let Some((idx, from)) = self.stack.pop() {
             if self.visit_node(idx) {
-                for out in self.graph.outgoing_edges_of(idx) {
+                for out in graph.outgoing_edges_of(idx) {
                     if !self.is_discovered(out) {
                         self.stack.push((out, idx));
                     }
@@ -39,8 +36,8 @@ impl<'a, V, W> DFS<'a, V, W> {
         None
     }
 
-    pub fn path_to(&mut self, to_idx: usize) -> Option<Vec<usize>> {
-        let mut from_map = vec![std::usize::MAX; self.graph.node_count()];
+    pub fn path_to<V, W>(&mut self, to_idx: usize, graph: &dyn Graph<V, W>) -> Option<Vec<usize>> {
+        let mut from_map = vec![std::usize::MAX; graph.node_count()];
         let mut out = Vec::new();
 
         while let Some((idx, from)) = self.stack.pop() {
@@ -65,7 +62,7 @@ impl<'a, V, W> DFS<'a, V, W> {
             if self.visit_node(idx) {
                 from_map[idx] = from;
 
-                for out in self.graph.outgoing_edges_of(idx) {
+                for out in graph.outgoing_edges_of(idx) {
                     if !self.is_discovered(out) {
                         self.stack.push((out, idx));
                     }
@@ -126,7 +123,7 @@ mod test_dfs {
 
         let mut dfs = DFS::new(&graph, 0);
         let found = loop {
-            if let Some((idx, from)) = dfs.next() {
+            if let Some((idx, from)) = dfs.next(&graph) {
                 if idx == 5 {
                     assert_eq!(from, 8);
                     break true;
@@ -137,14 +134,14 @@ mod test_dfs {
         };
 
         dfs = DFS::new(&graph, 0);
-        let path = dfs.path_to(5).unwrap();
+        let path = dfs.path_to(5, &graph).unwrap();
 
         assert!(found);
         assert!(path.len() == 5);
 
         let mut dfs = DFS::new(&graph, 0);
         let not_found = loop {
-            if let Some((idx, _from)) = dfs.next() {
+            if let Some((idx, _from)) = dfs.next(&graph) {
                 if idx == 10 {
                     break false;
                 }

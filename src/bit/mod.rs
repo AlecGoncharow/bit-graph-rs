@@ -40,7 +40,7 @@ impl BitGraph {
         let mut column = to / WORD_BITS;
         let mut offset = to % WORD_BITS + ((self.nodes.capacity() * from) % WORD_BITS);
 
-        if offset >= WORD_BITS - 1 {
+        if offset >= WORD_BITS {
             column += 1;
             offset -= WORD_BITS;
         }
@@ -65,7 +65,7 @@ impl BitGraph {
         let mut column = to / WORD_BITS;
         let mut offset = to % WORD_BITS + ((self.nodes.capacity() * from) % WORD_BITS);
 
-        if offset >= WORD_BITS - 1 {
+        if offset >= WORD_BITS {
             column += 1;
             offset -= WORD_BITS;
         }
