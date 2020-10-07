@@ -11,6 +11,9 @@ pub struct BFS {
     queue: VecDeque<(usize, usize)>,
 
     discovered: Vec<usize>,
+
+    pub from_map: Vec<usize>,
+    pub solved: bool,
 }
 
 impl BFS {
@@ -19,12 +22,16 @@ impl BFS {
             root_idx,
             discovered: vec![0; graph.node_count() / WORD_BITS + 1],
             queue: VecDeque::from(vec![(root_idx, root_idx)]),
+            from_map: vec![std::usize::MAX; graph.node_count()],
+            solved: false,
         }
     }
 
     pub fn next<V, W>(&mut self, graph: &dyn Graph<V, W>) -> Option<(usize, usize)> {
         while let Some((idx, from)) = self.queue.pop_front() {
             if self.visit_node(idx) {
+                self.from_map[idx] = from;
+
                 for out in graph.outgoing_edges_of(idx) {
                     if !self.is_discovered(out) {
                         self.queue.push_back((out, idx));
@@ -42,7 +49,6 @@ impl BFS {
         let mut out = Vec::new();
 
         while let Some((idx, from)) = self.queue.pop_front() {
-            println!("idx: {}, from {}", idx, from);
             if idx == to_idx {
                 let mut from_tmp = from;
                 out.push(idx);
