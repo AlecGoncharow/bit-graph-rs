@@ -10,6 +10,9 @@ pub struct DFS {
     stack: Vec<(usize, usize)>,
 
     discovered: Vec<usize>,
+
+    pub from_map: Vec<usize>,
+    pub solved: bool,
 }
 
 impl DFS {
@@ -18,12 +21,16 @@ impl DFS {
             root_idx,
             discovered: vec![0; graph.node_count() / WORD_BITS + 1],
             stack: vec![(root_idx, root_idx)],
+            from_map: vec![std::usize::MAX; graph.node_count()],
+            solved: false,
         }
     }
 
     pub fn next<V, W>(&mut self, graph: &dyn Graph<V, W>) -> Option<(usize, usize)> {
         while let Some((idx, from)) = self.stack.pop() {
             if self.visit_node(idx) {
+                self.from_map[idx] = from;
+
                 for out in graph.outgoing_edges_of(idx) {
                     if !self.is_discovered(out) {
                         self.stack.push((out, idx));
