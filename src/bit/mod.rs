@@ -107,6 +107,16 @@ pub fn toggle_bit(n: usize, k: usize) -> usize {
     n ^ (1 << k)
 }
 
+#[inline(always)]
+pub fn mask_n_bits(n:usize) -> usize {
+    (!0) << n
+}
+
+#[inline(always)]
+pub fn bool_to_mask(b:bool) -> usize {
+   (-((b as isize) & 1)) as usize  
+}
+
 impl Graph<u64, bool> for BitGraph {
     fn add_edge(&mut self, from: usize, to: usize) -> bool {
         self.set_edge_of_both(from, to, set_bit)
@@ -127,12 +137,41 @@ impl Graph<u64, bool> for BitGraph {
     }
 
     fn outgoing_edges_of(&self, node_index: usize) -> Vec<usize> {
+        /*
+         * Implementation notes:
+         *  To calculate the destination node from the ctz correctly, we need 
+         *  the to consider the following.
+         *
+         *  First, the start_offset tells how many bits into the
+         *  first row of the word should be discarded. Bits before the offset
+         *  should not be scanned. The start_offset additionally should be
+         *  subtracted from the calculated position for words after the start
+         *  word.
+         *
+         *  Second, the end_offset tells how many bits in the last word are
+         *  applicable to the current row. Bits after the end offset should
+         *  not be scanned.
+         *
+         *  Third, the number of words n already checked in the row should
+         *  add n*WORD_BITS to the destination node index.
+         */
+
         let start = (self.nodes.capacity() * node_index) / WORD_BITS;
-        let offset = (self.nodes.capacity() * node_index) % WORD_BITS;
+        let start_offset = (self.nodes.capacity() * node_index) % WORD_BITS;
         let end = (self.nodes.capacity() * (node_index + 1)) / WORD_BITS;
+        let end_offset = (self.nodes.capacity() * (node_index + 1)) % WORD_BITS;
         
         let mut index = start;
-        let mut word = self.edges[index];
+        
+        /*
+         * The first word in the row will always need to mask the first 
+         * start_offset bits. Additionally if the row is one word wide,
+         * the last end_offset bits must be masked as well
+         */
+        let mut word = self.edges[index]
+            & (mask_n_bits(start_offset)
+               & (!mask_n_bits(end_offset) | bool_to_mask(index != end)));
+        
         let mut out = Vec::new();
         loop {
             // If the word is empty, check for completion and get next word
@@ -141,15 +180,18 @@ impl Graph<u64, bool> for BitGraph {
                     break;
                 }
                 index = index + 1;
-                word = self.edges[index];
+                // Get the next word, and if it is the last word, mask out
+                // any bit larger than end_offset
+                word = self.edges[index] 
+                    & (!mask_n_bits(end_offset) | bool_to_mask(index != end));
             // If the word is not empty run ctz  
             } else {
                 // Get the total trailing zeroes in the word
                 // Finds the position of the next edge
                 let trailing_zeroes: usize = word.trailing_zeros() as usize;
-                // Push the found edge position
-                // subtracts offset from every word including the current
-                out.push(trailing_zeroes - offset + (WORD_BITS - offset) * (index - start));
+                // Compute and push the destination node index
+                // Address implementation notes in computation
+                out.push(trailing_zeroes - start_offset + WORD_BITS * (index - start));
                 // clear the lowest set bit of the word
                 word = word & (word - 1);
             }
@@ -158,42 +200,65 @@ impl Graph<u64, bool> for BitGraph {
     }
 
     fn incoming_edges_of(&self, node_index: usize) -> Vec<usize> {
-        let mut index = (self.nodes.capacity() * node_index) / WORD_BITS;
-        let mut offset = (self.nodes.capacity() * node_index) % WORD_BITS;
+        /*
+         * Implementation notes:
+         *  To calculate the destination node from the ctz correctly, we need 
+         *  the to consider the following.
+         *
+         *  First, the start_offset tells how many bits into the
+         *  first row of the word should be discarded. Bits before the offset
+         *  should not be scanned. The start_offset additionally should be
+         *  subtracted from the calculated position for words after the start
+         *  word.
+         *
+         *  Second, the end_offset tells how many bits in the last word are
+         *  applicable to the current row. Bits after the end offset should
+         *  not be scanned.
+         *
+         *  Third, the number of words n already checked in the row should
+         *  add n*WORD_BITS to the destination node index.
+         */
 
-        let mut word = self.edges_transpose[index];
+        let start = (self.nodes.capacity() * node_index) / WORD_BITS;
+        let start_offset = (self.nodes.capacity() * node_index) % WORD_BITS;
+        let end = (self.nodes.capacity() * (node_index + 1)) / WORD_BITS;
+        let end_offset = (self.nodes.capacity() * (node_index + 1)) % WORD_BITS;
+        
+        let mut index = start;
+        
+        /*
+         * The first word in the row will always need to mask the first 
+         * start_offset bits. Additionally if the row is one word wide,
+         * the last end_offset bits must be masked as well
+         */
+        let mut word = self.edges_transpose[index]
+            & (mask_n_bits(start_offset)
+               & (!mask_n_bits(end_offset) | bool_to_mask(index != end)));
+        
         let mut out = Vec::new();
-        let mut i = 0;
         loop {
-            let shifted = word >> offset;
-            let trailing_zeroes: usize = shifted.trailing_zeros() as usize;
-
-            if i + trailing_zeroes >= self.count {
-                break;
-            }
-
-            if (offset + trailing_zeroes) >= WORD_BITS - 1 {
-                word = self.edges[index + 1];
-                index += 1;
-                offset = 0;
-                i += trailing_zeroes;
+            // If the word is empty, check for completion and get next word
+            if word == 0x0 {
+                if index == end {
+                    break;
+                }
+                index = index + 1;
+                // Get the next word, and if it is the last word, mask out
+                // any bit larger than end_offset
+                word = self.edges_transpose[index] 
+                    & (!mask_n_bits(end_offset) | bool_to_mask(index != end));
+            // If the word is not empty run ctz  
             } else {
-                out.push(i + trailing_zeroes);
-                offset += trailing_zeroes + 1;
-                i += trailing_zeroes + 1;
-            }
-
-            if offset == WORD_BITS - 1 {
-                word = self.edges[index + 1];
-                index += 1;
-                offset = 0;
-            }
-
-            if i >= self.count - 1 {
-                break;
+                // Get the total trailing zeroes in the word
+                // Finds the position of the next edge
+                let trailing_zeroes: usize = word.trailing_zeros() as usize;
+                // Compute and push the destination node index
+                // Address implementation notes in computation
+                out.push(trailing_zeroes - start_offset + WORD_BITS * (index - start));
+                // clear the lowest set bit of the word
+                word = word & (word - 1);
             }
         }
-
         out
     }
 
@@ -278,8 +343,6 @@ mod tests {
         graph.add_edge(0, 1);
 
         graph.add_edge(2, 0);
-        println!("{}", graph.outgoing_edges_of(0)[0]);
-        println!("{}", graph.outgoing_edges_of(0)[1]);
         assert!(graph.outgoing_edges_of(0).len() == 1);
         assert!(graph.outgoing_edges_of(4).len() == 0);
 
