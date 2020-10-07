@@ -117,6 +117,12 @@ pub fn bool_to_mask(b:bool) -> usize {
    (-((b as isize) & 1)) as usize  
 }
 
+
+#[inline(always)]
+pub fn clear_lowest_set_bit(w:usize) -> usize {
+    w & (w - 1)
+}
+
 impl Graph<u64, bool> for BitGraph {
     fn add_edge(&mut self, from: usize, to: usize) -> bool {
         self.set_edge_of_both(from, to, set_bit)
@@ -193,7 +199,7 @@ impl Graph<u64, bool> for BitGraph {
                 // Address implementation notes in computation
                 out.push(trailing_zeroes - start_offset + WORD_BITS * (index - start));
                 // clear the lowest set bit of the word
-                word = word & (word - 1);
+                word = clear_lowest_set_bit(word); 
             }
         }
         out
@@ -256,7 +262,7 @@ impl Graph<u64, bool> for BitGraph {
                 // Address implementation notes in computation
                 out.push(trailing_zeroes - start_offset + WORD_BITS * (index - start));
                 // clear the lowest set bit of the word
-                word = word & (word - 1);
+                word = clear_lowest_set_bit(word);
             }
         }
         out
