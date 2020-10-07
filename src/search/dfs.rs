@@ -4,6 +4,8 @@ const WORD_BITS: usize = WORD_BYTES * 8;
 use crate::bit::single_bit_mask;
 use crate::Graph;
 
+use crate::search::Pathfinder;
+
 pub struct DFS {
     root_idx: usize,
 
@@ -15,18 +17,8 @@ pub struct DFS {
     pub solved: bool,
 }
 
-impl DFS {
-    pub fn new<V, W>(graph: &dyn Graph<V, W>, root_idx: usize) -> Self {
-        Self {
-            root_idx,
-            discovered: vec![0; graph.node_count() / WORD_BITS + 1],
-            stack: vec![(root_idx, root_idx)],
-            from_map: vec![std::usize::MAX; graph.node_count()],
-            solved: false,
-        }
-    }
-
-    pub fn next<V, W>(&mut self, graph: &dyn Graph<V, W>) -> Option<(usize, usize)> {
+impl<V, W> Pathfinder<V, W> for DFS {
+    fn next(&mut self, graph: &dyn Graph<V, W>) -> Option<(usize, usize)> {
         while let Some((idx, from)) = self.stack.pop() {
             if self.visit_node(idx) {
                 self.from_map[idx] = from;
@@ -43,7 +35,7 @@ impl DFS {
         None
     }
 
-    pub fn path_to<V, W>(&mut self, to_idx: usize, graph: &dyn Graph<V, W>) -> Option<Vec<usize>> {
+    fn path_to(&mut self, graph: &dyn Graph<V, W>, to_idx: usize) -> Option<Vec<usize>> {
         let mut from_map = vec![std::usize::MAX; graph.node_count()];
         let mut out = Vec::new();
 
@@ -85,6 +77,30 @@ impl DFS {
         }
     }
 
+    fn is_solved(&self) -> bool {
+        self.solved
+    }
+
+    fn set_solved(&mut self) {
+        self.solved = true;
+    }
+
+    fn from_index_of(&self, index: usize) -> usize {
+        self.from_map[index]
+    }
+}
+
+impl DFS {
+    pub fn new<V, W>(graph: &dyn Graph<V, W>, root_idx: usize) -> Self {
+        Self {
+            root_idx,
+            discovered: vec![0; graph.node_count() / WORD_BITS + 1],
+            stack: vec![(root_idx, root_idx)],
+            from_map: vec![std::usize::MAX; graph.node_count()],
+            solved: false,
+        }
+    }
+
     /// Visits node, returns true if first visit, else false
     fn visit_node(&mut self, node_idx: usize) -> bool {
         let first_visit = self.is_discovered(node_idx);
@@ -98,7 +114,7 @@ impl DFS {
     }
 
     fn is_discovered(&self, node_idx: usize) -> bool {
-        (self.discovered[node_idx / WORD_BITS] & single_bit_mask(node_idx % WORD_BITS)) == 1
+        (self.discovered[node_idx / WORD_BITS] & single_bit_mask(node_idx % WORD_BITS)) > 0
     }
 
     fn set_discovered(&mut self, node_idx: usize) {
@@ -141,7 +157,7 @@ mod test_dfs {
         };
 
         dfs = DFS::new(&graph, 0);
-        let path = dfs.path_to(5, &graph).unwrap();
+        let path = dfs.path_to(&graph, 5).unwrap();
 
         assert!(found);
         assert!(path.len() == 5);

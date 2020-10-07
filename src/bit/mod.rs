@@ -108,18 +108,17 @@ pub fn toggle_bit(n: usize, k: usize) -> usize {
 }
 
 #[inline(always)]
-pub fn mask_n_bits(n:usize) -> usize {
-    (!0) << n
+pub fn mask_n_bits(n: usize) -> usize {
+    std::usize::MAX << n
 }
 
 #[inline(always)]
-pub fn bool_to_mask(b:bool) -> usize {
-   (-((b as isize) & 1)) as usize  
+pub fn bool_to_mask(b: bool) -> usize {
+    (-((b as isize) & 1)) as usize
 }
 
-
 #[inline(always)]
-pub fn clear_lowest_set_bit(w:usize) -> usize {
+pub fn clear_lowest_set_bit(w: usize) -> usize {
     w & (w - 1)
 }
 
@@ -145,7 +144,7 @@ impl Graph<u64, bool> for BitGraph {
     fn outgoing_edges_of(&self, node_index: usize) -> Vec<usize> {
         /*
          * Implementation notes:
-         *  To calculate the destination node from the ctz correctly, we need 
+         *  To calculate the destination node from the ctz correctly, we need
          *  the to consider the following.
          *
          *  First, the start_offset tells how many bits into the
@@ -166,18 +165,17 @@ impl Graph<u64, bool> for BitGraph {
         let start_offset = (self.nodes.capacity() * node_index) % WORD_BITS;
         let end = (self.nodes.capacity() * (node_index + 1)) / WORD_BITS;
         let end_offset = (self.nodes.capacity() * (node_index + 1)) % WORD_BITS;
-        
+
         let mut index = start;
-        
+
         /*
-         * The first word in the row will always need to mask the first 
+         * The first word in the row will always need to mask the first
          * start_offset bits. Additionally if the row is one word wide,
          * the last end_offset bits must be masked as well
          */
         let mut word = self.edges[index]
-            & (mask_n_bits(start_offset)
-               & (!mask_n_bits(end_offset) | bool_to_mask(index != end)));
-        
+            & (mask_n_bits(start_offset) & (!mask_n_bits(end_offset) | bool_to_mask(index != end)));
+
         let mut out = Vec::new();
         loop {
             // If the word is empty, check for completion and get next word
@@ -188,9 +186,8 @@ impl Graph<u64, bool> for BitGraph {
                 index = index + 1;
                 // Get the next word, and if it is the last word, mask out
                 // any bit larger than end_offset
-                word = self.edges[index] 
-                    & (!mask_n_bits(end_offset) | bool_to_mask(index != end));
-            // If the word is not empty run ctz  
+                word = self.edges[index] & (!mask_n_bits(end_offset) | bool_to_mask(index != end));
+            // If the word is not empty run ctz
             } else {
                 // Get the total trailing zeroes in the word
                 // Finds the position of the next edge
@@ -199,7 +196,7 @@ impl Graph<u64, bool> for BitGraph {
                 // Address implementation notes in computation
                 out.push(trailing_zeroes - start_offset + WORD_BITS * (index - start));
                 // clear the lowest set bit of the word
-                word = clear_lowest_set_bit(word); 
+                word = clear_lowest_set_bit(word);
             }
         }
         out
@@ -208,7 +205,7 @@ impl Graph<u64, bool> for BitGraph {
     fn incoming_edges_of(&self, node_index: usize) -> Vec<usize> {
         /*
          * Implementation notes:
-         *  To calculate the destination node from the ctz correctly, we need 
+         *  To calculate the destination node from the ctz correctly, we need
          *  the to consider the following.
          *
          *  First, the start_offset tells how many bits into the
@@ -229,18 +226,17 @@ impl Graph<u64, bool> for BitGraph {
         let start_offset = (self.nodes.capacity() * node_index) % WORD_BITS;
         let end = (self.nodes.capacity() * (node_index + 1)) / WORD_BITS;
         let end_offset = (self.nodes.capacity() * (node_index + 1)) % WORD_BITS;
-        
+
         let mut index = start;
-        
+
         /*
-         * The first word in the row will always need to mask the first 
+         * The first word in the row will always need to mask the first
          * start_offset bits. Additionally if the row is one word wide,
          * the last end_offset bits must be masked as well
          */
         let mut word = self.edges_transpose[index]
-            & (mask_n_bits(start_offset)
-               & (!mask_n_bits(end_offset) | bool_to_mask(index != end)));
-        
+            & (mask_n_bits(start_offset) & (!mask_n_bits(end_offset) | bool_to_mask(index != end)));
+
         let mut out = Vec::new();
         loop {
             // If the word is empty, check for completion and get next word
@@ -251,9 +247,9 @@ impl Graph<u64, bool> for BitGraph {
                 index = index + 1;
                 // Get the next word, and if it is the last word, mask out
                 // any bit larger than end_offset
-                word = self.edges_transpose[index] 
+                word = self.edges_transpose[index]
                     & (!mask_n_bits(end_offset) | bool_to_mask(index != end));
-            // If the word is not empty run ctz  
+            // If the word is not empty run ctz
             } else {
                 // Get the total trailing zeroes in the word
                 // Finds the position of the next edge
@@ -437,6 +433,9 @@ mod tests {
         graph.add_edge(10, 5);
         assert!(graph.outgoing_edges_of(10).len() == 8);
         assert_eq!(graph.outgoing_edges_of(10), vec![2, 3, 4, 5, 6, 7, 8, 9]);
+
+        graph.add_edge(0, 200);
+        assert!(graph.outgoing_edges_of(0).len() == 1);
     }
 
     #[test]

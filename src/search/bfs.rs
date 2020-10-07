@@ -2,6 +2,7 @@ const WORD_BYTES: usize = std::mem::size_of::<usize>();
 const WORD_BITS: usize = WORD_BYTES * 8;
 
 use crate::bit::single_bit_mask;
+use crate::search::Pathfinder;
 use crate::Graph;
 use std::collections::VecDeque;
 
@@ -16,18 +17,8 @@ pub struct BFS {
     pub solved: bool,
 }
 
-impl BFS {
-    pub fn new<V, W>(graph: &dyn Graph<V, W>, root_idx: usize) -> Self {
-        Self {
-            root_idx,
-            discovered: vec![0; graph.node_count() / WORD_BITS + 1],
-            queue: VecDeque::from(vec![(root_idx, root_idx)]),
-            from_map: vec![std::usize::MAX; graph.node_count()],
-            solved: false,
-        }
-    }
-
-    pub fn next<V, W>(&mut self, graph: &dyn Graph<V, W>) -> Option<(usize, usize)> {
+impl<V, W> Pathfinder<V, W> for BFS {
+    fn next(&mut self, graph: &dyn Graph<V, W>) -> Option<(usize, usize)> {
         while let Some((idx, from)) = self.queue.pop_front() {
             if self.visit_node(idx) {
                 self.from_map[idx] = from;
@@ -44,7 +35,7 @@ impl BFS {
         None
     }
 
-    pub fn path_to<V, W>(&mut self, to_idx: usize, graph: &dyn Graph<V, W>) -> Option<Vec<usize>> {
+    fn path_to(&mut self, graph: &dyn Graph<V, W>, to_idx: usize) -> Option<Vec<usize>> {
         let mut from_map = vec![std::usize::MAX; graph.node_count()];
         let mut out = Vec::new();
 
@@ -84,7 +75,29 @@ impl BFS {
             Some(out)
         }
     }
+    fn is_solved(&self) -> bool {
+        self.solved
+    }
 
+    fn set_solved(&mut self) {
+        self.solved = true;
+    }
+
+    fn from_index_of(&self, index: usize) -> usize {
+        self.from_map[index]
+    }
+}
+
+impl BFS {
+    pub fn new<V, W>(graph: &dyn Graph<V, W>, root_idx: usize) -> Self {
+        Self {
+            root_idx,
+            discovered: vec![0; graph.node_count() / WORD_BITS + 1],
+            queue: VecDeque::from(vec![(root_idx, root_idx)]),
+            from_map: vec![std::usize::MAX; graph.node_count()],
+            solved: false,
+        }
+    }
     /// Visits node, returns true if first visit, else false
     fn visit_node(&mut self, node_idx: usize) -> bool {
         let first_visit = self.is_discovered(node_idx);
@@ -128,9 +141,9 @@ mod test_dfs {
         graph.add_edge(3, 5);
         graph.add_edge(5, 0);
 
-        let mut dfs = BFS::new(&graph, 0);
+        let mut bfs = BFS::new(&graph, 0);
         let found = loop {
-            if let Some((idx, from)) = dfs.next(&graph) {
+            if let Some((idx, from)) = bfs.next(&graph) {
                 if idx == 5 {
                     assert_eq!(from, 3);
                     break true;
@@ -140,15 +153,15 @@ mod test_dfs {
             }
         };
 
-        dfs = BFS::new(&graph, 0);
-        let path = dfs.path_to(5, &graph).unwrap();
+        bfs = BFS::new(&graph, 0);
+        let path = bfs.path_to(&graph, 5).unwrap();
 
         assert!(found);
         assert!(path.len() == 4);
 
-        let mut dfs = BFS::new(&graph, 0);
+        let mut bfs = BFS::new(&graph, 0);
         let not_found = loop {
-            if let Some((idx, _from)) = dfs.next(&graph) {
+            if let Some((idx, _from)) = bfs.next(&graph) {
                 if idx == 10 {
                     break false;
                 }
