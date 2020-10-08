@@ -1,0 +1,191 @@
+use crate::search::Pathfinder;
+use crate::Graph;
+use std::collections::binary_heap::BinaryHeap;
+#[derive(PartialEq, Eq, Debug)]
+struct HeapNode {
+    index: usize,
+    score: usize,
+}
+
+impl std::cmp::Ord for HeapNode {
+    /// flip order to make it a min heap
+    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+        other.score.cmp(&self.score)
+    }
+}
+// `PartialOrd` needs to be implemented as well.
+impl PartialOrd for HeapNode {
+    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+/// A star using manhattan distance as heuristic
+/// indicies are assumed to be an index into a 2D Array
+pub struct AStarMH {
+    root_idx: usize,
+    goal_idx: usize,
+
+    open_set: BinaryHeap<HeapNode>,
+
+    g_score: Vec<usize>,
+    f_score: Vec<usize>,
+
+    /// dims of environment
+    dim: usize,
+
+    pub from_map: Vec<usize>,
+    pub solved: bool,
+}
+
+impl AStarMH {
+    pub fn new<V, W>(
+        graph: &dyn Graph<V, W>,
+        root_idx: usize,
+        goal_idx: usize,
+        dim: usize,
+    ) -> Self {
+        let mut g_score = vec![std::usize::MAX; graph.node_count()];
+        g_score[root_idx] = 0;
+
+        let mut f_score = vec![std::usize::MAX; graph.node_count()];
+        f_score[root_idx] = mh_distance(root_idx, goal_idx, dim);
+
+        let mut open_set = BinaryHeap::new();
+        open_set.push(HeapNode {
+            index: root_idx,
+            score: f_score[root_idx],
+        });
+
+        Self {
+            root_idx,
+            goal_idx,
+            open_set,
+
+            g_score,
+            f_score,
+            dim,
+
+            from_map: vec![std::usize::MAX; graph.node_count()],
+            solved: false,
+        }
+    }
+}
+
+fn mh_distance(from: usize, to: usize, dim: usize) -> usize {
+    let (from_x, from_y) = (from / dim, from % dim);
+    let (to_x, to_y) = (to / dim, to % dim);
+
+    let diff_x = if from_x < to_x {
+        to_x - from_x
+    } else {
+        from_x - to_x
+    };
+
+    let diff_y = if from_y < to_y {
+        to_y - from_y
+    } else {
+        from_y - to_y
+    };
+
+    diff_x + diff_y
+}
+
+impl<V, W> Pathfinder<V, W> for AStarMH {
+    fn next(&mut self, graph: &dyn Graph<V, W>) -> Option<(usize, usize)> {
+        let current = match self.open_set.pop() {
+            Some(inner) => inner,
+            None => return None,
+        };
+
+        for idx in graph.outgoing_edges_of(current.index) {
+            let tenantive_g_score = self.g_score[current.index] + 1;
+            if tenantive_g_score < self.g_score[idx] {
+                self.from_map[idx] = current.index;
+                self.g_score[idx] = tenantive_g_score;
+                self.f_score[idx] = tenantive_g_score + mh_distance(idx, self.goal_idx, self.dim);
+                let neighbor = HeapNode {
+                    index: idx,
+                    score: self.f_score[idx],
+                };
+                if !self
+                    .open_set
+                    .iter()
+                    .any(|node| node.index == neighbor.index)
+                {
+                    self.open_set.push(neighbor);
+                }
+            }
+        }
+
+        Some((current.index, std::usize::MAX))
+    }
+
+    fn path_to(&mut self, graph: &dyn Graph<V, W>, _to_idx: usize) -> Option<Vec<usize>> {
+        let mut out = Vec::new();
+
+        loop {
+            let current = self.open_set.pop().unwrap();
+
+            if current.index == self.goal_idx {
+                let mut from_tmp = current.index;
+                out.push(current.index);
+                loop {
+                    if from_tmp == self.root_idx {
+                        break;
+                    }
+                    let from_idx = self.from_map[from_tmp];
+                    out.push(from_idx);
+
+                    from_tmp = from_idx;
+                }
+
+                break;
+            }
+
+            for idx in graph.outgoing_edges_of(current.index) {
+                let tenantive_g_score = self.g_score[current.index] + 1;
+                if tenantive_g_score < self.g_score[idx] {
+                    self.from_map[idx] = current.index;
+                    self.g_score[idx] = tenantive_g_score;
+                    self.f_score[idx] =
+                        tenantive_g_score + mh_distance(idx, self.goal_idx, self.dim);
+                    let neighbor = HeapNode {
+                        index: idx,
+                        score: self.f_score[idx],
+                    };
+                    if !self
+                        .open_set
+                        .iter()
+                        .any(|node| node.index == neighbor.index)
+                    {
+                        self.open_set.push(neighbor);
+                    }
+                }
+            }
+
+            if self.open_set.len() == 0 {
+                break;
+            }
+        }
+
+        if out.len() == 0 {
+            None
+        } else {
+            out.reverse();
+            Some(out)
+        }
+    }
+
+    fn is_solved(&self) -> bool {
+        self.solved
+    }
+
+    fn set_solved(&mut self) {
+        self.solved = true;
+    }
+
+    fn from_index_of(&self, index: usize) -> usize {
+        self.from_map[index]
+    }
+}
