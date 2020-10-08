@@ -189,3 +189,57 @@ impl<V, W> Pathfinder<V, W> for AStarMH {
         self.from_map[index]
     }
 }
+
+#[cfg(test)]
+mod test_dfs {
+    use super::*;
+    use crate::bit::BitGraph;
+
+    #[test]
+    fn it_works() {
+        let mut graph = BitGraph::with_capacity(16);
+
+        for i in 0..15 {
+            graph.push_node(i);
+        }
+
+        graph.add_edge(0, 2);
+        graph.add_edge(0, 1);
+        graph.add_edge(2, 4);
+        graph.add_edge(3, 8);
+        graph.add_edge(8, 5);
+        graph.add_edge(1, 3);
+        graph.add_edge(3, 5);
+        graph.add_edge(5, 0);
+
+        let mut astar = AStarMH::new(&graph, 0, 5, 16);
+        let found = loop {
+            if let Some((idx, _from)) = astar.next(&graph) {
+                if idx == 5 {
+                    break true;
+                }
+            } else {
+                break false;
+            }
+        };
+
+        let mut bfs = AStarMH::new(&graph, 0, 5, 16);
+        let path = bfs.path_to(&graph, 5).unwrap();
+
+        assert!(found);
+        assert!(path.len() == 4);
+        assert!(path == vec![0, 1, 3, 5]);
+
+        let mut astar = AStarMH::new(&graph, 0, 10, 16);
+        let not_found = loop {
+            if let Some((idx, _from)) = astar.next(&graph) {
+                if idx == 10 {
+                    break false;
+                }
+            } else {
+                break true;
+            }
+        };
+        assert!(not_found);
+    }
+}
