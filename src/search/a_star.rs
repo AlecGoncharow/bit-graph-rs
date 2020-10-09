@@ -5,12 +5,16 @@ use std::collections::binary_heap::BinaryHeap;
 struct HeapNode {
     index: usize,
     score: usize,
+    h_score: usize,
 }
 
 impl std::cmp::Ord for HeapNode {
     /// flip order to make it a min heap
     fn cmp(&self, other: &Self) -> std::cmp::Ordering {
-        other.score.cmp(&self.score)
+        other
+            .score
+            .cmp(&self.score)
+            .then(other.h_score.cmp(&self.h_score))
     }
 }
 // `PartialOrd` needs to be implemented as well.
@@ -55,6 +59,7 @@ impl AStarMH {
         open_set.push(HeapNode {
             index: root_idx,
             score: f_score[root_idx],
+            h_score: f_score[root_idx],
         });
 
         Self {
@@ -107,6 +112,7 @@ impl<V, W> Pathfinder<V, W> for AStarMH {
                 let neighbor = HeapNode {
                     index: idx,
                     score: self.f_score[idx],
+                    h_score: self.f_score[idx] - tenantive_g_score,
                 };
                 if !self
                     .open_set
@@ -153,6 +159,7 @@ impl<V, W> Pathfinder<V, W> for AStarMH {
                     let neighbor = HeapNode {
                         index: idx,
                         score: self.f_score[idx],
+                        h_score: self.f_score[idx] - tenantive_g_score,
                     };
                     if !self
                         .open_set

@@ -194,7 +194,7 @@ impl Graph<u64, bool> for BitGraph {
                 let trailing_zeroes: usize = word.trailing_zeros() as usize;
                 // Compute and push the destination node index
                 // Address implementation notes in computation
-                out.push(trailing_zeroes - start_offset + WORD_BITS * (index - start));
+                out.push(trailing_zeroes + WORD_BITS * (index - start) - start_offset);
                 // clear the lowest set bit of the word
                 word = clear_lowest_set_bit(word);
             }
@@ -256,7 +256,7 @@ impl Graph<u64, bool> for BitGraph {
                 let trailing_zeroes: usize = word.trailing_zeros() as usize;
                 // Compute and push the destination node index
                 // Address implementation notes in computation
-                out.push(trailing_zeroes - start_offset + WORD_BITS * (index - start));
+                out.push(trailing_zeroes + WORD_BITS * (index - start) - start_offset);
                 // clear the lowest set bit of the word
                 word = clear_lowest_set_bit(word);
             }
