@@ -133,8 +133,13 @@ impl Graph<u64, bool> for BitGraph {
 
     fn has_edge(&self, from: usize, to: usize) -> bool {
         let row = (self.nodes.capacity() * from) / WORD_BITS;
-        let column = to / WORD_BITS;
-        let offset = to % WORD_BITS + ((self.nodes.capacity() * from) % WORD_BITS);
+        let mut column = to / WORD_BITS;
+        let mut offset = to % WORD_BITS + ((self.nodes.capacity() * from) % WORD_BITS);
+
+        if offset >= WORD_BITS {
+            column += 1;
+            offset -= WORD_BITS;
+        }
 
         let word = self.edges[row + column];
 
@@ -284,8 +289,13 @@ impl Graph<u64, bool> for BitGraph {
 
     fn get_edge(&self, from: usize, to: usize) -> Option<EdgeMeta<bool>> {
         let row = (self.nodes.capacity() * from) / WORD_BITS;
-        let column = to / WORD_BITS;
-        let offset = to % WORD_BITS + ((self.nodes.capacity() * from) % WORD_BITS);
+        let mut column = to / WORD_BITS;
+        let mut offset = to % WORD_BITS + ((self.nodes.capacity() * from) % WORD_BITS);
+
+        if offset >= WORD_BITS {
+            column += 1;
+            offset -= WORD_BITS;
+        }
 
         let word = self.edges[row + column];
 
