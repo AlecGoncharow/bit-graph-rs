@@ -54,6 +54,16 @@ pub trait Graph<T, W> {
     /// returns `Vec` of indicies coming in to a given node
     fn incoming_edges_of(&self, node_index: usize) -> Vec<usize>;
 
+    fn all_edge_pairs(&self) -> Vec<(usize, usize)> {
+        let mut out = Vec::new();
+        for index in 0..self.node_count() {
+            self.outgoing_edges_of(index)
+                .iter()
+                .for_each(|to| out.push((index, *to)))
+        }
+        out
+    }
+
     /// appends node to graph's node storage
     fn push_node(&mut self, value: T) -> usize;
 
@@ -67,4 +77,7 @@ pub trait Graph<T, W> {
     fn remove_node(&mut self, node_index: usize) -> T;
 
     fn node_count(&self) -> usize;
+
+    // :)
+    fn set_count(&mut self, count: usize);
 }

@@ -315,6 +315,10 @@ impl Graph<u64, bool> for BitGraph {
         self.count
     }
 
+    fn set_count(&mut self, count: usize) {
+        self.count = count;
+    }
+
     fn set_edge(&mut self, from_to: (usize, usize), weight: bool) -> bool {
         if weight {
             self.add_edge(from_to.0, from_to.1)
@@ -496,5 +500,33 @@ mod tests {
 
         assert!(graph.incoming_edges_of(1).len() == 6);
         assert_eq!(graph.incoming_edges_of(1), vec![0, 2, 3, 4, 5, 7]);
+    }
+
+    #[test]
+    fn all_edges_test() {
+        let mut graph = BitGraph::new();
+
+        for i in 1..16 {
+            graph.push_node(i);
+        }
+
+        graph.add_edge(0, 1);
+
+        graph.add_edge(2, 0);
+
+        assert!(graph.incoming_edges_of(1).len() == 1);
+        assert!(graph.incoming_edges_of(4).len() == 0);
+
+        graph.add_edge(2, 1);
+        graph.add_edge(3, 1);
+        graph.add_edge(4, 1);
+        graph.add_edge(5, 1);
+        graph.add_edge(7, 1);
+
+        assert!(graph.incoming_edges_of(1).len() == 6);
+        assert_eq!(graph.incoming_edges_of(1), vec![0, 2, 3, 4, 5, 7]);
+
+        println!("{:#?}", graph.all_edge_pairs());
+        assert!(graph.all_edge_pairs().len() == 7);
     }
 }

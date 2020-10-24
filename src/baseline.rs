@@ -121,6 +121,10 @@ impl Graph<u64, u8> for AdjGraph {
     fn set_edge(&mut self, from_to: (usize, usize), weight: u8) -> bool {
         self.set_edge_of_both(from_to.0, from_to.1, weight) > 0
     }
+
+    fn set_count(&mut self, count: usize) {
+        self.count = count;
+    }
 }
 
 #[cfg(test)]

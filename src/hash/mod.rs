@@ -280,6 +280,10 @@ impl Graph<u64, usize> for HashGraph {
         self.count
     }
 
+    fn set_count(&mut self, count: usize) {
+        self.count = count;
+    }
+
     fn set_edge(&mut self, from_to: (usize, usize), weight: usize) -> bool {
         self.edges.insert(from_to, weight)
     }
